@@ -1,0 +1,16 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.vector_academy.app",
+            "sha256_cert_fingerprints": [
+                "2F:26:29:1F:24:EA:DA:E7:0A:DB:53:0C:2C:6E:38:6D:0E:A6:42:76:B4:2F:4B:D9:9D:3A:2C:E6:44:2B:F9:50",
+                "D7:02:62:96:0A:EC:92:BF:14:D8:39:D6:73:69:42:A5:87:86:DA:49:BA:C6:5F:64:75:A4:A1:19:6F:85:B1:82",
+                "74:DA:FC:BB:A1:DE:26:7B:87:DF:A8:34:E3:62:C2:06:76:6E:48:0F:33:C9:77:8B:42:1E:80:11:8E:88:32:E8"
+            ]
+        }
+    }
+]

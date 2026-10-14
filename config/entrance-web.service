@@ -1,0 +1,16 @@
+[Unit]
+Description=Entrance Tricks website (moenationalexam.com)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/entrance_tricks_web
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
