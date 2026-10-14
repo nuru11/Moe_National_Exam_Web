@@ -16,6 +16,7 @@ import {
     Alert,
     Stack,
     Skeleton,
+    CircularProgress,
 } from '@mui/material';
 import {
     Search,
@@ -26,22 +27,45 @@ import {
     TrendingUp,
     Assessment,
     CheckCircle,
+    ArrowForward,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useExams } from '@/lib/api/hooks';
+import { useExams, useGrades } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
+import { WEB_GRADE_APPS } from '@/lib/config/app';
+import { useSelectedApp } from '@/components/SelectedAppProvider';
+import AppProgramCard from '@/components/AppProgramCard';
 
 export default function ExamsPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { data: exams, isLoading, error } = useExams(user?.grade?.id || 0);
+    const searchParams = useSearchParams();
+    const gradeFromQuery = Number(searchParams.get('grade')) || 0;
+    const [authReady, setAuthReady] = useState(false);
 
+    useEffect(() => {
+        const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+            setAuthReady(true);
+        });
+        if (useAuthStore.persist.hasHydrated()) {
+            queueMicrotask(() => {
+                setAuthReady(true);
+            });
+        }
+        return unsubscribe;
+    }, []);
+
+    const gradeId = gradeFromQuery || (authReady ? user?.grade?.id || 0 : 0);
+    const { data: exams, isLoading, error } = useExams(gradeId);
+
+    const { selectedPackage, setSelectedPackage } = useSelectedApp();
+    const { data: grades, isLoading: gradesLoading } = useGrades();
+    const gradesForApp = grades?.filter((grade) => grade.appPackage === selectedPackage) ?? [];
+    const selectedApp = WEB_GRADE_APPS.find((app) => app.package === selectedPackage);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<string>('all');
     const [filterSubject, setFilterSubject] = useState<string>('all');
-    const searchParams = useSearchParams();
-    const id = searchParams.get('id');
 
     // Get unique exam types and subjects
     const examTypes = exams ? ['all', ...Array.from(new Set(exams.map(e => e.examType)))] : ['all'];
@@ -57,17 +81,10 @@ export default function ExamsPage() {
         return matchesSearch && matchesType && matchesSubject;
     }) || [];
 
-    const handleStartExam = (examId: number) => {
-        router.push(`/exams/${examId}`);
+    const handleOpenExam = (examId: number) => {
+        const gradeQuery = gradeId ? `?grade=${gradeId}` : '';
+        router.push(`/exams/${examId}${gradeQuery}`);
     };
-
-    useEffect(() => {
-        if (!id) {
-            router.push('/exams');
-        } else {
-            router.push(`/exams/${id}/`);
-        }
-    }, [id, router]);
 
     return (
         <Box
@@ -78,6 +95,67 @@ export default function ExamsPage() {
             }}
         >
             <Container maxWidth="xl">
+                {!gradeFromQuery && !authReady && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                        <Skeleton variant="rounded" width="100%" height={180} />
+                    </Box>
+                )}
+                {authReady && !gradeId && (
+                    <Box sx={{ py: 2 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                            Practice Exams
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                            Select a program, then a grade, to open the matching exams.
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+                                gap: 2,
+                            }}
+                        >
+                            {WEB_GRADE_APPS.map((app) => (
+                                <AppProgramCard
+                                    key={app.package}
+                                    appPackage={app.package}
+                                    label={app.label}
+                                    selected={selectedPackage === app.package}
+                                    onSelect={() => setSelectedPackage(app.package)}
+                                />
+                            ))}
+                        </Box>
+                        {selectedApp && (
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                                    {selectedApp.label} grades
+                                </Typography>
+                                {gradesLoading ? (
+                                    <CircularProgress size={28} />
+                                ) : gradesForApp.length === 0 ? (
+                                    <Typography color="text.secondary">
+                                        No grades are available for this app yet.
+                                    </Typography>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                                        {gradesForApp.map((grade) => (
+                                            <Button
+                                                key={grade.id}
+                                                variant="contained"
+                                                endIcon={<ArrowForward />}
+                                                onClick={() => router.push(`/exams?grade=${grade.id}`)}
+                                            >
+                                                {grade.name}
+                                            </Button>
+                                        ))}
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
+                )}
+                {!!gradeId && (
+                <>
                 {/* Header Section */}
                 <Box sx={{ mb: 6 }}>
                     <Typography
@@ -320,7 +398,7 @@ export default function ExamsPage() {
                                                 size="medium"
                                                 disabled={exam.isLocked || exam.hasUserAttempted}
                                                 startIcon={exam.isLocked ? <Lock /> : exam.hasUserAttempted ? <CheckCircle /> : <LockOpen />}
-                                                onClick={() => handleStartExam(exam.id)}
+                                                onClick={() => handleOpenExam(exam.id)}
                                                 sx={{
                                                     minWidth: { xs: '100%', sm: 140 },
                                                     whiteSpace: 'nowrap',
@@ -403,6 +481,8 @@ export default function ExamsPage() {
                         View Leaderboard
                     </Button>
                 </Box>
+                </>
+                )}
             </Container>
         </Box>
     );

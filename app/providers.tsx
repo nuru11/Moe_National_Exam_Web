@@ -6,6 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { makeQueryClient } from '@/lib/config/queryClient';
 import theme from '@/lib/theme';
+import { SelectedAppProvider } from '@/components/SelectedAppProvider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     // Create QueryClient instance once per render
@@ -13,10 +14,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                {children}
-            </ThemeProvider>
+            <SelectedAppProvider>
+                <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    {children}
+                </ThemeProvider>
+            </SelectedAppProvider>
         </QueryClientProvider>
     );
 }

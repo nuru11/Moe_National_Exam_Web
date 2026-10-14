@@ -26,6 +26,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import DownloadLinks, { DownloadMenuItems } from '@/components/DownloadLinks';
 
 export default function AuthenticatedHeader() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export default function AuthenticatedHeader() {
                 display: { xs: 'none', sm: 'block' },
               }}
             >
-              Entrance Tricks
+              MOE National Exam
             </Typography>
           </Link>
 
@@ -122,6 +123,8 @@ export default function AuthenticatedHeader() {
                 {item.label}
               </Button>
             ))}
+
+            <DownloadLinks compact />
 
             {user && (
               <Box sx={{ ml: 2 }}>
@@ -230,6 +233,7 @@ export default function AuthenticatedHeader() {
               <MenuItem onClick={handleLogout}>
                 <Logout sx={{ mr: 2 }} /> Logout
               </MenuItem>
+              <DownloadMenuItems onNavigate={handleMobileMenuClose} />
             </Menu>
           </Box>
         </Toolbar>

@@ -3,6 +3,7 @@
 export type Grade = {
     id: number;
     name: string;
+    appPackage?: string | null;
 }
 export type Choice = {
     id: number;

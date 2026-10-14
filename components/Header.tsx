@@ -22,6 +22,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import DownloadLinks, { DownloadMenuItems } from '@/components/DownloadLinks';
 
 interface HeaderProps {
   transparent?: boolean;
@@ -92,7 +93,7 @@ export default function Header({ transparent = false }: HeaderProps) {
                 transition: 'color 0.3s ease',
               }}
             >
-              Entrance Tricks
+              MOE National Exam
             </Typography>
           </Link>
 
@@ -114,6 +115,8 @@ export default function Header({ transparent = false }: HeaderProps) {
                 {item.label}
               </Button>
             ))}
+
+            <DownloadLinks compact />
 
             <Button
               component={Link}
@@ -167,6 +170,7 @@ export default function Header({ transparent = false }: HeaderProps) {
               >
                 Sign In
               </MenuItem>
+              <DownloadMenuItems onNavigate={handleMobileMenuClose} />
             </Menu>
           </Box>
         </Toolbar>

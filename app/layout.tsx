@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Entrance Tricks - Master Your Exams",
+  title: "MOE National Exam - Master Your Exams",
   description: "Comprehensive e-learning platform for exam preparation with practice tests, leaderboards, and more.",
   icons: {
     icon: [

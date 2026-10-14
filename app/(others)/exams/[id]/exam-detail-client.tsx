@@ -32,25 +32,45 @@ import {
     CheckCircleOutline,
     Cancel,
     EmojiEvents,
+    Flag,
 } from '@mui/icons-material';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useExam, useQuestions, useBulkSubmitAnswers, useSubmitExam } from '@/lib/api/hooks';
 import { QuestionResponse } from '@/lib/types';
 import Image from 'next/image';
 import LatexRenderer from '@/components/LatexRenderer';
+import { useAuthStore } from '@/store/authStore';
 
 export default function ExamDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const examId = Number(params.id);
+    const gradeId = Number(searchParams.get('grade')) || undefined;
+    const { isAuthenticated } = useAuthStore();
+    const [authReady, setAuthReady] = useState(false);
+    const examsPath = gradeId ? `/exams?grade=${gradeId}` : '/exams';
 
-    const { data: exam, isLoading, error } = useExam(examId);
+    useEffect(() => {
+        const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+            setAuthReady(true);
+        });
+        if (useAuthStore.persist.hasHydrated()) {
+            queueMicrotask(() => {
+                setAuthReady(true);
+            });
+        }
+        return unsubscribe;
+    }, []);
+
+    const { data: exam, isLoading, error } = useExam(examId, gradeId);
     const bulkSubmitAnswersMutation = useBulkSubmitAnswers();
     const submitExamMutation = useSubmitExam();
 
     const [examStarted, setExamStarted] = useState(false);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+    const [flaggedQuestionIds, setFlaggedQuestionIds] = useState<number[]>([]);
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
     const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
     const [examCompleted, setExamCompleted] = useState(false);
@@ -58,7 +78,7 @@ export default function ExamDetailPage() {
     const [examScore, setExamScore] = useState<{ correct: number; total: number } | null>(null);
     const timerInitialized = useRef(false);
 
-    const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuestions(examId);
+    const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuestions(examId, authReady && isAuthenticated);
 
 
     const unansweredQuestions = questions?.filter((question) => !question.hasUserAnswered);
@@ -88,13 +108,13 @@ export default function ExamDetailPage() {
         return () => clearInterval(timer);
     }, [timeRemaining, exam, examCompleted]);
 
-    // Show loading state while exam or questions are loading
-    if (isLoading || isQuestionsLoading) {
+    // Guests can read the overview before questions load. Signed-in visitors wait for questions.
+    if (!authReady || isLoading || (isAuthenticated && isQuestionsLoading)) {
         return (
             <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', gap: 2 }}>
                 <LinearProgress sx={{ width: 300 }} />
                 <Typography variant="body2" color="text.secondary">
-                    {isLoading ? 'Loading exam...' : 'Loading questions...'}
+                    {!authReady || isLoading ? 'Loading exam...' : 'Loading questions...'}
                 </Typography>
             </Box>
         );
@@ -107,7 +127,7 @@ export default function ExamDetailPage() {
                 <Alert severity="error" sx={{ mb: 2 }}>
                     Failed to load exam. Please try again.
                 </Alert>
-                <Button variant="outlined" onClick={() => router.push('/exams')}>
+                <Button variant="outlined" onClick={() => router.push(examsPath)}>
                     Back to Exams
                 </Button>
             </Container>
@@ -115,13 +135,13 @@ export default function ExamDetailPage() {
     }
 
     // Show error if questions failed to load
-    if (questionsError) {
+    if (isAuthenticated && questionsError) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Alert severity="error" sx={{ mb: 2 }}>
                     Failed to load exam questions. Please try again.
                 </Alert>
-                <Button variant="outlined" onClick={() => router.push('/exams')}>
+                <Button variant="outlined" onClick={() => router.push(examsPath)}>
                     Back to Exams
                 </Button>
             </Container>
@@ -129,7 +149,7 @@ export default function ExamDetailPage() {
     }
 
     // Show empty state if there are no questions
-    if (!unansweredQuestions || unansweredQuestions.length === 0) {
+    if (isAuthenticated && (!unansweredQuestions || unansweredQuestions.length === 0)) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -140,7 +160,7 @@ export default function ExamDetailPage() {
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                         This exam doesn&apos;t have any questions yet. Please check back later or contact support.
                     </Typography>
-                    <Button variant="contained" onClick={() => router.push('/exams')}>
+                    <Button variant="contained" onClick={() => router.push(examsPath)}>
                         Back to Exams
                     </Button>
                 </Paper>
@@ -159,6 +179,21 @@ export default function ExamDetailPage() {
     };
 
     const handleStartExam = () => {
+        if (!authReady) {
+            return;
+        }
+        if (!isAuthenticated) {
+            const returnPath = gradeId ? `/exams/${examId}?grade=${gradeId}` : `/exams/${examId}`;
+            const params = new URLSearchParams({
+                tab: 'signup',
+                return: returnPath,
+            });
+            if (gradeId) {
+                params.set('grade', String(gradeId));
+            }
+            router.push(`/signIn?${params.toString()}`);
+            return;
+        }
         setExamStarted(true);
     };
 
@@ -180,6 +215,17 @@ export default function ExamDetailPage() {
         if (currentQuestionIndex > 0) {
             setCurrentQuestionIndex(currentQuestionIndex - 1);
         }
+    };
+
+    const toggleFlag = () => {
+        if (!currentQuestion) {
+            return;
+        }
+        setFlaggedQuestionIds((current) =>
+            current.includes(currentQuestion.id)
+                ? current.filter((id) => id !== currentQuestion.id)
+                : [...current, currentQuestion.id]
+        );
     };
 
     const calculateScore = () => {
@@ -427,7 +473,7 @@ export default function ExamDetailPage() {
                             variant="contained"
                             size="large"
                             startIcon={<ArrowBack />}
-                            onClick={() => router.push('/exams')}
+                            onClick={() => router.push(examsPath)}
                             sx={{ px: 4 }}
                         >
                             Back to Exams
@@ -478,7 +524,7 @@ export default function ExamDetailPage() {
                                         {isQuestionsLoading ? (
                                             <CircularProgress size={24} />
                                         ) : (
-                                            <Chip label={questions?.length || 0} color="primary" />
+                                            <Chip label={questions?.length ?? exam.totalQuestions ?? 0} color="primary" />
                                         )}
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -525,7 +571,7 @@ export default function ExamDetailPage() {
                                         Exam retakes are not allowed. Please check your results on your profile page or try a different exam.
                                     </Typography>
                                 </Alert>
-                            ) : (!questions || questions.length === 0) ? (
+                            ) : (isAuthenticated && (!questions || questions.length === 0)) ? (
                                 <Alert severity="warning" sx={{ mb: 3 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         This exam has no questions available yet.
@@ -551,7 +597,7 @@ export default function ExamDetailPage() {
                                     variant="outlined"
                                     size="large"
                                     startIcon={<ArrowBack />}
-                                    onClick={() => router.push('/exams')}
+                                    onClick={() => router.push(examsPath)}
                                 >
                                     Back to Exams
                                 </Button>
@@ -559,7 +605,7 @@ export default function ExamDetailPage() {
                                     variant="contained"
                                     size="large"
                                     onClick={handleStartExam}
-                                    disabled={isQuestionsLoading || !questions || questions.length === 0 || exam.hasUserAttempted}
+                                    disabled={isAuthenticated && (isQuestionsLoading || !questions || questions.length === 0 || exam.hasUserAttempted)}
                                     startIcon={exam.hasUserAttempted ? <CheckCircle /> : undefined}
                                     sx={{ px: 4 }}
                                 >
@@ -709,7 +755,7 @@ export default function ExamDetailPage() {
                     )}
 
                     {/* Navigation Buttons */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                         <Button
                             variant="outlined"
                             size="large"
@@ -718,6 +764,16 @@ export default function ExamDetailPage() {
                             disabled={currentQuestionIndex === 0}
                         >
                             Previous
+                        </Button>
+                        <Button
+                            variant={currentQuestion && flaggedQuestionIds.includes(currentQuestion.id) ? 'contained' : 'outlined'}
+                            size="large"
+                            color="error"
+                            startIcon={<Flag />}
+                            onClick={toggleFlag}
+                            disabled={!currentQuestion}
+                        >
+                            {currentQuestion && flaggedQuestionIds.includes(currentQuestion.id) ? 'Flagged' : 'Flag'}
                         </Button>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             {currentQuestionIndex === (unansweredQuestions?.length || 0) - 1 ? (
@@ -748,39 +804,52 @@ export default function ExamDetailPage() {
                             Question Navigator
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {unansweredQuestions?.map((question, index) => (
+                            {unansweredQuestions?.map((question, index) => {
+                                const isFlagged = flaggedQuestionIds.includes(question.id);
+                                const isAnswered = Boolean(selectedAnswers[question.id]);
+                                const isCurrent = currentQuestionIndex === index;
+                                return (
                                 <Button
                                     key={question.id}
-                                    variant={currentQuestionIndex === index ? 'contained' : 'outlined'}
+                                    variant={isCurrent || isFlagged ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={() => setCurrentQuestionIndex(index)}
                                     sx={{
                                         minWidth: 45,
                                         height: 45,
                                         borderRadius: 2,
-                                        backgroundColor:
-                                            selectedAnswers[question.id]
-                                                ? currentQuestionIndex === index
+                                        backgroundColor: isFlagged
+                                            ? 'error.main'
+                                            : isAnswered
+                                                ? isCurrent
                                                     ? 'primary.main'
                                                     : 'success.light'
                                                 : undefined,
-                                        color:
-                                            selectedAnswers[question.id] && currentQuestionIndex !== index
+                                        color: isFlagged
+                                            ? 'error.contrastText'
+                                            : isAnswered && !isCurrent
                                                 ? 'success.dark'
                                                 : undefined,
-                                        borderColor:
-                                            selectedAnswers[question.id]
+                                        borderColor: isFlagged
+                                            ? 'error.main'
+                                            : isAnswered
                                                 ? 'success.main'
                                                 : undefined,
+                                        '&:hover': isFlagged
+                                            ? { backgroundColor: 'error.dark' }
+                                            : undefined,
                                     }}
                                 >
-                                    {selectedAnswers[question.id] ? (
+                                    {isFlagged ? (
+                                        index + 1
+                                    ) : isAnswered ? (
                                         <CheckCircle sx={{ fontSize: 20 }} />
                                     ) : (
                                         index + 1
                                     )}
                                 </Button>
-                            ))}
+                                );
+                            })}
                         </Box>
                     </Paper>
                 </Container>

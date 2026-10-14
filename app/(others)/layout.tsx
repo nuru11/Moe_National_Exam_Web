@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Box, CircularProgress } from '@mui/material';
 import AuthenticatedHeader from '@/components/AuthenticatedHeader';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function ProtectedLayout({
     children,
@@ -38,6 +39,7 @@ export default function ProtectedLayout({
             <Box component="main" sx={{ pt: 8 }}>
                 {children}
             </Box>
+            <Footer />
         </>
     }
 
@@ -48,6 +50,7 @@ export default function ProtectedLayout({
             <Box component="main" sx={{ pt: 8 }}>
                 {children}
             </Box>
+            <Footer />
         </>
     );
 }

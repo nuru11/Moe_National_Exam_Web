@@ -544,21 +544,6 @@ export default function TermsOfService() {
         </Container>
       </Box>
 
-      {/* Footer */}
-      <Box
-        sx={{
-          py: 4,
-          backgroundColor: 'background.paper',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography variant="body2" color="text.secondary" align="center">
-            © 2025 Entrance Tricks. All rights reserved.
-          </Typography>
-        </Container>
-      </Box>
     </>
   );
 }

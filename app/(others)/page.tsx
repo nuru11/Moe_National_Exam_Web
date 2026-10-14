@@ -10,28 +10,34 @@ import {
   CardContent,
   Avatar,
   Chip,
-  Stack,
+  CircularProgress,
 } from '@mui/material';
 import {
-  School,
   EmojiEvents,
   Assessment,
   TrendingUp,
   Groups,
   Timer,
   CheckCircle,
-  ArrowForward,
   Star,
+  ArrowForward,
 } from '@mui/icons-material';
 import Link from 'next/link';
-import Image from 'next/image';
-import Header from '@/components/Header';
-import { useEntranceTricksStatus, useTestimonials } from '@/lib/api/hooks';
+import { useRouter } from 'next/navigation';
+import { useEntranceTricksStatus, useGrades, useTestimonials } from '@/lib/api/hooks';
+import { WEB_GRADE_APPS } from '@/lib/config/app';
+import { useSelectedApp } from '@/components/SelectedAppProvider';
+import AppProgramCard from '@/components/AppProgramCard';
 
 export default function Home() {
 
+  const router = useRouter();
+  const { selectedPackage, setSelectedPackage } = useSelectedApp();
   const { data: entranceTricksStatus } = useEntranceTricksStatus();
   const { data: testimonials } = useTestimonials();
+  const { data: grades, isLoading: gradesLoading } = useGrades();
+  const gradesForApp = grades?.filter((grade) => grade.appPackage === selectedPackage) ?? [];
+  const selectedApp = WEB_GRADE_APPS.find((app) => app.package === selectedPackage);
   const features = [
     {
       icon: <Assessment sx={{ fontSize: 40 }} />,
@@ -102,120 +108,68 @@ export default function Home() {
         }}
       >
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <Chip
-                label="🎓 Your Path to Success"
-                sx={{
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  mb: 3,
-                  backdropFilter: 'blur(10px)',
-                }}
+         
+         
+         
+          <Typography variant="overline" sx={{ display: 'block', mb: 2, letterSpacing: '0.08em', opacity: 0.9 }}>
+            Select a program
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+              gap: 2,
+            }}
+          >
+            {WEB_GRADE_APPS.map((app) => (
+              <AppProgramCard
+                key={app.package}
+                appPackage={app.package}
+                label={app.label}
+                selected={selectedPackage === app.package}
+                onSelect={() => setSelectedPackage(app.package)}
               />
-              <Typography
-                variant="h1"
-                sx={{
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
-                  fontWeight: 800,
-                  mb: 3,
-                  lineHeight: 1.2,
-                }}
-              >
-                Master Your Entrance Exams
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 4,
-                  opacity: 0.95,
-                  fontSize: { xs: '1.1rem', md: '1.25rem' },
-                  fontWeight: 400,
-                }}
-              >
-                Practice with real exam questions, compete on leaderboards, and track your progress.
-                Join thousands of students achieving their dreams.
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Button
-                  component={Link}
-                  href="/exams"
-                  variant="contained"
-                  size="large"
-                  endIcon={<ArrowForward />}
-                  sx={{
-                    backgroundColor: 'white',
-                    color: 'primary.main',
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.9)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                    },
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Start Practicing
-                </Button>
-                <Button
-                  component={Link}
-                  href="/leaderboard"
-                  variant="outlined"
-                  size="large"
-                  sx={{
-                    borderColor: 'white',
-                    color: 'white',
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    '&:hover': {
-                      borderColor: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      transform: 'translateY(-2px)',
-                    },
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  View Leaderboard
-                </Button>
-              </Stack>
-            </Box>
+            ))}
+          </Box>
+          {selectedApp && (
             <Box
               sx={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
+                mt: 3,
+                p: { xs: 2.5, md: 3 },
+                borderRadius: 3,
+                backgroundColor: '#ffffff',
+                color: 'text.primary',
+                boxShadow: '0 16px 40px rgba(15, 23, 42, 0.18)',
               }}
             >
-              <Box
-                sx={{
-                  width: '100%',
-                  maxWidth: 500,
-                  height: { xs: 220, md: 360 },
-                  background: 'white',
-                  borderRadius: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: { xs: 2, md: 4 },
-                }}
-              >
-                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                  <Image
-                    src="/logos/education_assessment_examinations_service_logo.jpg"
-                    alt="Educational Assessment and Examinations Service"
-                    fill
-                    style={{ objectFit: 'contain' }}
-                    priority
-                  />
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                Choose a {selectedApp.label} grade
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select your grade to open the matching exams.
+              </Typography>
+              {gradesLoading ? (
+                <CircularProgress size={28} />
+              ) : gradesForApp.length === 0 ? (
+                <Typography color="text.secondary">
+                  No grades are available for this app yet.
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                  {gradesForApp.map((grade) => (
+                    <Button
+                      key={grade.id}
+                      variant="contained"
+                      endIcon={<ArrowForward />}
+                      onClick={() => router.push(`/exams?grade=${grade.id}`)}
+                    >
+                      {grade.name}
+                    </Button>
+                  ))}
                 </Box>
-              </Box>
+              )}
             </Box>
-          </Box>
+          )}
         </Container>
       </Box>
 
@@ -410,53 +364,6 @@ export default function Home() {
         </Container>
       </Box>
 
-      {/* Footer */}
-      <Box
-        sx={{
-          py: 4,
-          backgroundColor: 'background.paper',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <School sx={{ fontSize: 28, mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Entrance Tricks
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 2 }}>
-              <Button
-                component={Link}
-                href="/privacy-policy"
-                sx={{ textTransform: 'none', color: 'text.secondary', minWidth: 'auto' }}
-              >
-                Privacy Policy
-              </Button>
-              <Button
-                component={Link}
-                href="/tos"
-                sx={{ textTransform: 'none', color: 'text.secondary', minWidth: 'auto' }}
-              >
-                Terms of Service
-              </Button>
-            </Box>
-            <Typography variant="body2" color="text.secondary">
-              © 2025 Entrance Tricks. All rights reserved.
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
     </>
   );
 }

@@ -19,7 +19,7 @@ import type {
     UserScoreResponse,
 } from '@/lib/types';
 import { useAuthStore } from '@/store/authStore';
-import { WEB_GRADE_APPS } from '@/lib/config/app';
+import { APP_PACKAGE, WEB_GRADE_APPS } from '@/lib/config/app';
 
 // Auth Hooks
 export const useLogin = () => {
@@ -55,18 +55,31 @@ export const useExams = (gradeId: number) => {
     return useQuery({
         queryKey: ['exams', gradeId],
         queryFn: async () => {
-            const response = await axiosInstance.get<ExamResponse[]>(`/app/exams/?mode_type=exam_mode&grade=${gradeId}&device=mobile`);
+            const params = new URLSearchParams({
+                mode_type: 'exam_mode',
+                grade: String(gradeId),
+                device: 'mobile',
+                app_package: APP_PACKAGE,
+            });
+            const response = await axiosInstance.get<ExamResponse[]>(`/app/exams/?${params.toString()}`);
             return response.data;
         },
         enabled: !!gradeId,
     });
 };
 
-export const useExam = (examId: number) => {
+export const useExam = (examId: number, gradeId?: number) => {
     return useQuery({
-        queryKey: ['exam', examId],
+        queryKey: ['exam', examId, gradeId ?? null],
         queryFn: async () => {
-            const response = await axiosInstance.get<ExamResponse>(`/app/exams/${examId}/`);
+            const params = new URLSearchParams({
+                device: 'mobile',
+                app_package: APP_PACKAGE,
+            });
+            if (gradeId) {
+                params.set('grade', String(gradeId));
+            }
+            const response = await axiosInstance.get<ExamResponse>(`/app/exams/${examId}/?${params.toString()}`);
             return response.data;
         },
         enabled: !!examId,
@@ -199,14 +212,14 @@ export const useNewsItem = (newsId: number) => {
 
 
 
-export const useQuestions = (examId: number) => {
+export const useQuestions = (examId: number, enabled = true) => {
     return useQuery({
         queryKey: ['questions', examId],
         queryFn: async () => {
             const response = await axiosInstance.get<QuestionResponse[]>(`/app/questions/?exam=${examId}&device=mobile`);
             return response.data;
         },
-        enabled: !!examId,
+        enabled: !!examId && enabled,
     });
 };
 
@@ -273,6 +286,22 @@ export const useEntranceTricksStatus = () => {
     });
 };
 
+
+export type AppStoreLink = {
+    appPackage: string;
+    playStoreUrl: string;
+    appStoreUrl: string;
+};
+
+export const useStoreLinks = () => {
+    return useQuery({
+        queryKey: ['store-links'],
+        queryFn: async () => {
+            const response = await axiosInstance.get<AppStoreLink[]>('/app/store-links/');
+            return response.data;
+        },
+    });
+};
 
 export const useTestimonials = () => {
     return useQuery({
