@@ -28,7 +28,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { useLogin, useRegister, useGrades } from '@/lib/api/hooks';
+import { useLogin, useRegister, useGrades, useForgotPassword, useResetPassword } from '@/lib/api/hooks';
 import Header from '@/components/Header';
 import { APP_PACKAGE } from '@/lib/config/app';
 import gradeMenuItems from '@/components/GradeMenuItems';
@@ -111,9 +111,17 @@ export default function SignInPage() {
   });
 
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [resetStep, setResetStep] = useState<'email' | 'code' | null>(null);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
+  const forgotMutation = useForgotPassword();
+  const resetMutation = useResetPassword();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -124,6 +132,68 @@ export default function SignInPage() {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setError('');
+    setNotice('');
+    setResetStep(null);
+  };
+
+  const openForgotPassword = () => {
+    setResetEmail(loginData.email);
+    setResetCode('');
+    setResetPassword('');
+    setResetConfirm('');
+    setError('');
+    setNotice('');
+    setResetStep('email');
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setNotice('');
+    if (!isValidEmail(resetEmail)) {
+      setError('Enter a valid email address');
+      return;
+    }
+    try {
+      const result = await forgotMutation.mutateAsync(resetEmail.trim().toLowerCase());
+      setResetEmail(resetEmail.trim().toLowerCase());
+      setNotice(result.detail);
+      setResetStep('code');
+    } catch (err: unknown) {
+      const error = err as AxiosError;
+      setError(apiErrorMessage(error.response?.data, 'We could not send the email. Try again in a moment.'));
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setNotice('');
+    if (!resetCode.trim() || !resetPassword || !resetConfirm) {
+      setError('Please fill in all fields');
+      return;
+    }
+    if (resetPassword !== resetConfirm) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (resetPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+    try {
+      const result = await resetMutation.mutateAsync({
+        email: resetEmail,
+        code: resetCode.trim(),
+        password: resetPassword,
+      });
+      setLoginData({ email: resetEmail, password: '' });
+      setResetStep(null);
+      setNotice(result.detail);
+    } catch (err: unknown) {
+      const error = err as AxiosError;
+      setError(apiErrorMessage(error.response?.data, 'That code is invalid or expired.'));
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -277,9 +347,90 @@ export default function SignInPage() {
                   {error}
                 </Alert>
               )}
+              {notice && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {notice}
+                </Alert>
+              )}
 
               {/* Sign In Tab */}
               <TabPanel value={tabValue} index={0}>
+                {resetStep === 'email' && (
+                  <form onSubmit={handleForgotPassword}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Enter the email on your account. We will send a 6-digit code.
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      margin="normal"
+                      placeholder="Enter your email"
+                    />
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      disabled={forgotMutation.isPending}
+                      sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    >
+                      {forgotMutation.isPending ? <CircularProgress size={24} color="inherit" /> : 'Send code'}
+                    </Button>
+                    <Button fullWidth onClick={() => { setResetStep(null); setError(''); setNotice(''); }}>
+                      Back to sign in
+                    </Button>
+                  </form>
+                )}
+                {resetStep === 'code' && (
+                  <form onSubmit={handleResetPassword}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Enter the code sent to {resetEmail} and choose a new password.
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      label="Code"
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value)}
+                      margin="normal"
+                      placeholder="6-digit code"
+                    />
+                    <TextField
+                      fullWidth
+                      label="New password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      margin="normal"
+                      placeholder="At least 6 characters"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Confirm password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={resetConfirm}
+                      onChange={(e) => setResetConfirm(e.target.value)}
+                      margin="normal"
+                      placeholder="Repeat the new password"
+                    />
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      disabled={resetMutation.isPending}
+                      sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    >
+                      {resetMutation.isPending ? <CircularProgress size={24} color="inherit" /> : 'Reset password'}
+                    </Button>
+                    <Button fullWidth onClick={openForgotPassword}>
+                      Send a new code
+                    </Button>
+                  </form>
+                )}
+                {resetStep === null && (
                 <form onSubmit={handleLogin}>
                   <TextField
                     fullWidth
@@ -327,6 +478,11 @@ export default function SignInPage() {
                     }}
                     placeholder="Enter your password"
                   />
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button onClick={openForgotPassword} sx={{ textTransform: 'none' }}>
+                      Forgot password?
+                    </Button>
+                  </Box>
                   <Button
                     fullWidth
                     type="submit"
@@ -342,6 +498,7 @@ export default function SignInPage() {
                     )}
                   </Button>
                 </form>
+                )}
               </TabPanel>
 
               {/* Sign Up Tab */}

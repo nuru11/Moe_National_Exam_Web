@@ -50,6 +50,24 @@ export const useRegister = () => {
     });
 };
 
+export const useForgotPassword = () => {
+    return useMutation({
+        mutationFn: async (email: string) => {
+            const response = await axiosInstance.post<{ detail: string }>('/auth/password/forgot/', { email });
+            return response.data;
+        },
+    });
+};
+
+export const useResetPassword = () => {
+    return useMutation({
+        mutationFn: async (payload: { email: string; code: string; password: string }) => {
+            const response = await axiosInstance.post<{ detail: string }>('/auth/password/reset/', payload);
+            return response.data;
+        },
+    });
+};
+
 // Exams Hooks
 export const useExams = (gradeId: number) => {
     return useQuery({

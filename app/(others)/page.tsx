@@ -111,30 +111,10 @@ export default function Home() {
          
          
          
-          <Typography variant="overline" sx={{ display: 'block', mb: 2, letterSpacing: '0.08em', opacity: 0.9 }}>
-            Select a program
-          </Typography>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
-              gap: 2,
-            }}
-          >
-            {WEB_GRADE_APPS.map((app) => (
-              <AppProgramCard
-                key={app.package}
-                appPackage={app.package}
-                label={app.label}
-                selected={selectedPackage === app.package}
-                onSelect={() => setSelectedPackage(app.package)}
-              />
-            ))}
-          </Box>
           {selectedApp && (
             <Box
               sx={{
-                mt: 3,
+                mb: 3,
                 p: { xs: 2.5, md: 3 },
                 borderRadius: 3,
                 backgroundColor: '#ffffff',
@@ -170,6 +150,26 @@ export default function Home() {
               )}
             </Box>
           )}
+          <Typography variant="overline" sx={{ display: 'block', mb: 2, letterSpacing: '0.08em', opacity: 0.9 }}>
+            Select a program
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+              gap: 2,
+            }}
+          >
+            {WEB_GRADE_APPS.map((app) => (
+              <AppProgramCard
+                key={app.package}
+                appPackage={app.package}
+                label={app.label}
+                selected={selectedPackage === app.package}
+                onSelect={() => setSelectedPackage(app.package)}
+              />
+            ))}
+          </Box>
         </Container>
       </Box>
 
