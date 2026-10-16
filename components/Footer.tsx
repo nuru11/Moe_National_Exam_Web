@@ -31,7 +31,7 @@ export default function Footer() {
                             MOE National Exam
                         </Typography>
                     </Box>
-                    <DownloadLinks stores={false} />
+                    <DownloadLinks />
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 2 }}>
                         <Button
                             component={Link}
