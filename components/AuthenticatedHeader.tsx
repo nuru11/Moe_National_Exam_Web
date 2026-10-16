@@ -180,6 +180,7 @@ export default function AuthenticatedHeader() {
 
           {/* Mobile Menu */}
           <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1 }}>
+            <DownloadLinks compact />
             {user && (
               <Avatar
                 alt={user.firstName}

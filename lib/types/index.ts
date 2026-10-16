@@ -98,6 +98,10 @@ export type ExamResponse = {
     modeType: string;
     year: string | null;
     hasUserAttempted: boolean;
+    userResult?: {
+        correctAnswers: number;
+        totalQuestions: number;
+    } | null;
     totalQuestions: number | null;
     givenTimeInMinutes: number;
     isLocked: boolean;

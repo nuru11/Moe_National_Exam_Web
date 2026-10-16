@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Button, IconButton, MenuItem, Typography } from '@mui/material';
-import { useStoreLinks } from '@/lib/api/hooks';
 import { useActiveStoreLinks } from '@/components/SelectedAppProvider';
 
 const TELEGRAM_URL = 'https://t.me/entrance_tricks';
@@ -45,12 +44,49 @@ function AppStoreIcon({ size = 18 }: { size?: number }) {
     );
 }
 
-interface DownloadLinksProps {
-    compact?: boolean;
+type StorePlatform = 'android' | 'ios' | 'desktop';
+
+function useStorePlatform() {
+    const [platform, setPlatform] = useState<StorePlatform | null>(null);
+
+    useEffect(() => {
+        const agent = navigator.userAgent;
+        if (/android/i.test(agent)) {
+            setPlatform('android');
+        } else if (/iPhone|iPad|iPod/i.test(agent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+            setPlatform('ios');
+        } else {
+            setPlatform('desktop');
+        }
+    }, []);
+
+    return platform;
 }
 
-export default function DownloadLinks({ compact = false }: DownloadLinksProps) {
-    const { playStoreUrl, appStoreUrl } = useActiveStoreLinks();
+function storesForPlatform(playStoreUrl: string, appStoreUrl: string, platform: StorePlatform | null) {
+    if (platform === 'android') {
+        return { playStoreUrl, appStoreUrl: '' };
+    }
+    if (platform === 'ios') {
+        return { playStoreUrl: '', appStoreUrl };
+    }
+    if (platform === 'desktop') {
+        return { playStoreUrl, appStoreUrl };
+    }
+    return { playStoreUrl: '', appStoreUrl: '' };
+}
+
+interface DownloadLinksProps {
+    compact?: boolean;
+    stores?: boolean;
+}
+
+export default function DownloadLinks({ compact = false, stores = true }: DownloadLinksProps) {
+    const activeLinks = useActiveStoreLinks();
+    const platform = useStorePlatform();
+    const { playStoreUrl, appStoreUrl } = stores
+        ? storesForPlatform(activeLinks.playStoreUrl, activeLinks.appStoreUrl, platform)
+        : { playStoreUrl: '', appStoreUrl: '' };
     const buttonSx = {
         textTransform: 'none',
         borderColor: 'divider',
@@ -107,53 +143,14 @@ export default function DownloadLinks({ compact = false }: DownloadLinksProps) {
     );
 }
 
-export function AppBoxStoreButtons({ appPackage }: { appPackage: string }) {
-    const { data } = useStoreLinks();
-    const row = data?.find((item) => item.appPackage === appPackage);
-    const playStoreUrl = row?.playStoreUrl || '';
-    const appStoreUrl = row?.appStoreUrl || '';
-    if (!playStoreUrl && !appStoreUrl) {
-        return null;
-    }
-
-    return (
-        <Box
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-            sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}
-        >
-            {playStoreUrl && (
-                <Button
-                    component="a"
-                    href={playStoreUrl}
-                    {...linkProps}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<PlayStoreIcon />}
-                    sx={{ textTransform: 'none', minWidth: 0, px: 1 }}
-                >
-                    Play Store
-                </Button>
-            )}
-            {appStoreUrl && (
-                <Button
-                    component="a"
-                    href={appStoreUrl}
-                    {...linkProps}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AppStoreIcon />}
-                    sx={{ textTransform: 'none', minWidth: 0, px: 1 }}
-                >
-                    App Store
-                </Button>
-            )}
-        </Box>
-    );
-}
-
 export function DownloadMenuItems({ onNavigate }: { onNavigate?: () => void }) {
-    const { playStoreUrl, appStoreUrl } = useActiveStoreLinks();
+    const activeLinks = useActiveStoreLinks();
+    const platform = useStorePlatform();
+    const { playStoreUrl, appStoreUrl } = storesForPlatform(
+        activeLinks.playStoreUrl,
+        activeLinks.appStoreUrl,
+        platform,
+    );
     const items = [
         { href: TELEGRAM_URL, label: 'Telegram', icon: <TelegramIcon size={20} /> },
         ...(playStoreUrl ? [{ href: playStoreUrl, label: 'Google Play', icon: <PlayStoreIcon /> }] : []),

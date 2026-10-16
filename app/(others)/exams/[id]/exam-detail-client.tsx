@@ -135,7 +135,7 @@ export default function ExamDetailPage() {
     }
 
     // Show error if questions failed to load
-    if (isAuthenticated && questionsError) {
+    if (isAuthenticated && questionsError && !exam.hasUserAttempted) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -149,7 +149,7 @@ export default function ExamDetailPage() {
     }
 
     // Show empty state if there are no questions
-    if (isAuthenticated && (!unansweredQuestions || unansweredQuestions.length === 0)) {
+    if (isAuthenticated && !exam.hasUserAttempted && (!unansweredQuestions || unansweredQuestions.length === 0)) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -180,6 +180,9 @@ export default function ExamDetailPage() {
 
     const handleStartExam = () => {
         if (!authReady) {
+            return;
+        }
+        if (exam.hasUserAttempted) {
             return;
         }
         if (!isAuthenticated) {
@@ -563,14 +566,19 @@ export default function ExamDetailPage() {
                             <Divider sx={{ my: 3 }} />
 
                             {exam.hasUserAttempted ? (
-                                <Alert severity="warning" sx={{ mb: 3 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                                        You have already attempted this exam
+                                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                                        Your result
                                     </Typography>
-                                    <Typography variant="body2">
-                                        Exam retakes are not allowed. Please check your results on your profile page or try a different exam.
+                                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                        {exam.userResult?.correctAnswers ?? 0} / {exam.userResult?.totalQuestions ?? 0}
                                     </Typography>
-                                </Alert>
+                                    <Typography variant="h6" color="text.secondary">
+                                        {exam.userResult && exam.userResult.totalQuestions > 0
+                                            ? ((exam.userResult.correctAnswers / exam.userResult.totalQuestions) * 100).toFixed(1)
+                                            : '0.0'}%
+                                    </Typography>
+                                </Box>
                             ) : (isAuthenticated && (!questions || questions.length === 0)) ? (
                                 <Alert severity="warning" sx={{ mb: 3 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -601,16 +609,17 @@ export default function ExamDetailPage() {
                                 >
                                     Back to Exams
                                 </Button>
-                                <Button
-                                    variant="contained"
-                                    size="large"
-                                    onClick={handleStartExam}
-                                    disabled={isAuthenticated && (isQuestionsLoading || !questions || questions.length === 0 || exam.hasUserAttempted)}
-                                    startIcon={exam.hasUserAttempted ? <CheckCircle /> : undefined}
-                                    sx={{ px: 4 }}
-                                >
-                                    {isQuestionsLoading ? 'Loading...' : exam.hasUserAttempted ? 'Already Attempted' : 'Start Exam'}
-                                </Button>
+                                {!exam.hasUserAttempted && (
+                                    <Button
+                                        variant="contained"
+                                        size="large"
+                                        onClick={handleStartExam}
+                                        disabled={isAuthenticated && (isQuestionsLoading || !questions || questions.length === 0)}
+                                        sx={{ px: 4 }}
+                                    >
+                                        {isQuestionsLoading ? 'Loading...' : 'Start Exam'}
+                                    </Button>
+                                )}
                             </Box>
                         </Paper>
                     </Container>

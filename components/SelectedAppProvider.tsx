@@ -1,15 +1,17 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CONTENT_APP_PACKAGE } from '@/lib/config/app';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useStoreLinks } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
 
 const STORAGE_KEY = 'selected-app-package';
+const GRADE_KEY = 'selected-grade-id';
 
 type SelectedAppContextValue = {
     selectedPackage: string | null;
     setSelectedPackage: (appPackage: string | null) => void;
+    selectedGradeId: number | null;
+    setSelectedGrade: (gradeId: number, appPackage?: string | null) => void;
     ready: boolean;
 };
 
@@ -17,6 +19,7 @@ const SelectedAppContext = createContext<SelectedAppContextValue | null>(null);
 
 export function SelectedAppProvider({ children }: { children: React.ReactNode }) {
     const [selectedPackage, setSelectedPackageState] = useState<string | null>(null);
+    const [selectedGradeId, setSelectedGradeIdState] = useState<number | null>(null);
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
@@ -24,20 +27,35 @@ export function SelectedAppProvider({ children }: { children: React.ReactNode })
         if (saved) {
             setSelectedPackageState(saved);
         }
+        const savedGrade = Number(sessionStorage.getItem(GRADE_KEY));
+        if (savedGrade) {
+            setSelectedGradeIdState(savedGrade);
+        }
         setReady(true);
     }, []);
 
-    const setSelectedPackage = (appPackage: string | null) => {
+    const setSelectedPackage = useCallback((appPackage: string | null) => {
         setSelectedPackageState(appPackage);
+        setSelectedGradeIdState(null);
+        sessionStorage.removeItem(GRADE_KEY);
         if (appPackage) {
             sessionStorage.setItem(STORAGE_KEY, appPackage);
         } else {
             sessionStorage.removeItem(STORAGE_KEY);
         }
-    };
+    }, []);
+
+    const setSelectedGrade = useCallback((gradeId: number, appPackage?: string | null) => {
+        setSelectedGradeIdState(gradeId);
+        sessionStorage.setItem(GRADE_KEY, String(gradeId));
+        if (appPackage) {
+            setSelectedPackageState(appPackage);
+            sessionStorage.setItem(STORAGE_KEY, appPackage);
+        }
+    }, []);
 
     return (
-        <SelectedAppContext.Provider value={{ selectedPackage, setSelectedPackage, ready }}>
+        <SelectedAppContext.Provider value={{ selectedPackage, setSelectedPackage, selectedGradeId, setSelectedGrade, ready }}>
             {children}
         </SelectedAppContext.Provider>
     );
@@ -64,7 +82,7 @@ function linksForPackage(
 
 export function useActiveStoreLinks() {
     const { data, isFetched } = useStoreLinks();
-    const { selectedPackage, ready: selectionReady } = useSelectedApp();
+    const { selectedPackage, selectedGradeId, ready: selectionReady } = useSelectedApp();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const gradePackage = useAuthStore((state) => state.user?.grade?.appPackage);
     const [authReady, setAuthReady] = useState(false);
@@ -85,8 +103,8 @@ export function useActiveStoreLinks() {
     if (isAuthenticated && gradePackage) {
         return linksForPackage(data, gradePackage);
     }
-    if (selectedPackage) {
+    if (selectedGradeId && selectedPackage) {
         return linksForPackage(data, selectedPackage);
     }
-    return linksForPackage(data, CONTENT_APP_PACKAGE);
+    return { playStoreUrl: '', appStoreUrl: '' };
 }

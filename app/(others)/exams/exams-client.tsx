@@ -59,8 +59,18 @@ export default function ExamsPage() {
     const gradeId = gradeFromQuery || (authReady ? user?.grade?.id || 0 : 0);
     const { data: exams, isLoading, error } = useExams(gradeId);
 
-    const { selectedPackage, setSelectedPackage } = useSelectedApp();
+    const { selectedPackage, setSelectedPackage, setSelectedGrade } = useSelectedApp();
     const { data: grades, isLoading: gradesLoading } = useGrades();
+
+    useEffect(() => {
+        if (!gradeFromQuery || !grades) {
+            return;
+        }
+        const grade = grades.find((item) => item.id === gradeFromQuery);
+        if (grade) {
+            setSelectedGrade(grade.id, grade.appPackage);
+        }
+    }, [gradeFromQuery, grades, setSelectedGrade]);
     const gradesForApp = grades?.filter((grade) => grade.appPackage === selectedPackage) ?? [];
     const selectedApp = WEB_GRADE_APPS.find((app) => app.package === selectedPackage);
     const [searchQuery, setSearchQuery] = useState('');
@@ -143,7 +153,10 @@ export default function ExamsPage() {
                                                 key={grade.id}
                                                 variant="contained"
                                                 endIcon={<ArrowForward />}
-                                                onClick={() => router.push(`/exams?grade=${grade.id}`)}
+                                                onClick={() => {
+                                                    setSelectedGrade(grade.id);
+                                                    router.push(`/exams?grade=${grade.id}`);
+                                                }}
                                             >
                                                 {grade.name}
                                             </Button>
@@ -396,7 +409,7 @@ export default function ExamsPage() {
                                             <Button
                                                 variant="contained"
                                                 size="medium"
-                                                disabled={exam.isLocked || exam.hasUserAttempted}
+                                                disabled={exam.isLocked}
                                                 startIcon={exam.isLocked ? <Lock /> : exam.hasUserAttempted ? <CheckCircle /> : <LockOpen />}
                                                 onClick={() => handleOpenExam(exam.id)}
                                                 sx={{
@@ -404,7 +417,7 @@ export default function ExamsPage() {
                                                     whiteSpace: 'nowrap',
                                                 }}
                                             >
-                                                {exam.isLocked ? 'Locked' : exam.hasUserAttempted ? 'Attempted' : 'Start Exam'}
+                                                {exam.isLocked ? 'Locked' : exam.hasUserAttempted ? 'View Result' : 'Start Exam'}
                                             </Button>
                                         </Box>
                                     </Box>

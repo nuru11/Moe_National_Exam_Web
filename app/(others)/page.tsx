@@ -32,7 +32,7 @@ import AppProgramCard from '@/components/AppProgramCard';
 export default function Home() {
 
   const router = useRouter();
-  const { selectedPackage, setSelectedPackage } = useSelectedApp();
+  const { selectedPackage, setSelectedPackage, setSelectedGrade } = useSelectedApp();
   const { data: entranceTricksStatus } = useEntranceTricksStatus();
   const { data: testimonials } = useTestimonials();
   const { data: grades, isLoading: gradesLoading } = useGrades();
@@ -141,7 +141,10 @@ export default function Home() {
                       key={grade.id}
                       variant="contained"
                       endIcon={<ArrowForward />}
-                      onClick={() => router.push(`/exams?grade=${grade.id}`)}
+                      onClick={() => {
+                        setSelectedGrade(grade.id);
+                        router.push(`/exams?grade=${grade.id}`);
+                      }}
                     >
                       {grade.name}
                     </Button>

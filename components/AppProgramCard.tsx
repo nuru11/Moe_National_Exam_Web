@@ -10,8 +10,6 @@ import {
     CheckCircle,
     ArrowForward,
 } from '@mui/icons-material';
-import { AppBoxStoreButtons } from '@/components/DownloadLinks';
-
 const APP_CARD_DETAILS: Record<string, { description: string; Icon: typeof School }> = {
     'com.vector_academy.app': { description: 'University entrance', Icon: School },
     'com.freshman_tricks.app': { description: 'First-year courses', Icon: MenuBook },
@@ -96,7 +94,6 @@ export default function AppProgramCard({
                     {details?.description}
                 </Typography>
             </Box>
-            <AppBoxStoreButtons appPackage={appPackage} />
             <Box
                 sx={{
                     mt: 'auto',

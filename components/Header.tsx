@@ -137,6 +137,7 @@ export default function Header({ transparent = false }: HeaderProps) {
 
           {/* Mobile Menu */}
           <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1 }}>
+            <DownloadLinks compact />
             <IconButton
               onClick={handleMobileMenuOpen}
               sx={{
